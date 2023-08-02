@@ -1,8 +1,3 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { Chessboard } from "react-chessboard";
-import { Chess } from "chess.js";
-import CustomDialog from "./components/CustomDialog";
-import socket from "./socket";
 import {
   Card,
   CardContent,
@@ -14,6 +9,20 @@ import {
   Typography,
   Box,
 } from "@mui/material";
+import { styled } from '@mui/system';
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Chessboard } from "react-chessboard";
+import { Chess } from "chess.js";
+import CustomDialog from "./components/CustomDialog";
+import socket from "./socket";
+
+const StyledCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+}));
+
+const StyledList = styled(List)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+}));
 
 function Game({ players, room, orientation, cleanup }) {
   const chess = useMemo(() => new Chess(), []); // <- 1
@@ -34,7 +43,7 @@ function Game({ players, room, orientation, cleanup }) {
             setOver(
               `Checkmate! ${chess.turn() === "w" ? "black" : "white"} wins!`
             ); 
-            // The winner is determined by checking which side made the last move
+            // The winner is determined by checking for which side made the last move
           } else if (chess.isDraw()) { // if it is a draw
             setOver("Draw"); // set message to "Draw"
           } else {
@@ -50,84 +59,87 @@ function Game({ players, room, orientation, cleanup }) {
     [chess]
   );
 
-    // onDrop function
-    function onDrop(sourceSquare, targetSquare) {
-      // orientation is either 'white' or 'black'. game.turn() returns 'w' or 'b'
-      if (chess.turn() !== orientation[0]) return false; // <- 1 prohibit player from moving piece of other player
-  
-      if (players.length < 2) return false; // <- 2 disallow a move if the opponent has not joined
-  
-      const moveData = {
-        from: sourceSquare,
-        to: targetSquare,
-        color: chess.turn(),
-        promotion: "q", // promote to queen where possible
-      };
-  
-      const move = makeAMove(moveData);
-  
-      // illegal move
-      if (move === null) return false;
-  
-      socket.emit("move", { // <- 3 emit a move event.
-        move,
-        room,
-      }); // this event will be transmitted to the opponent via the server
-  
-      return true;
-    }
+  // onDrop function
+  function onDrop(sourceSquare, targetSquare) {
+    // orientation is either 'white' or 'black'. game.turn() returns 'w' or 'b'
+    if (chess.turn() !== orientation[0]) return false; // <- 1 prohibit player from moving piece of other player
 
-    useEffect(() => {
-      socket.on("move", (move) => {
-        makeAMove(move); //
-      });
-    }, [makeAMove]);
+    if (players.length < 2) return false; // <- 2 disallow a move if the opponent has not joined
 
-    useEffect(() => {
-      socket.on('playerDisconnected', (player) => {
-        setOver(`${player.username} has disconnected`); // set game over
-      });
-    }, []);
+    const moveData = {
+      from: sourceSquare,
+      to: targetSquare,
+      color: chess.turn(),
+      promotion: "q", // promote to queen where possible
+    };
 
-    useEffect(() => {
-      socket.on('closeRoom', ({ roomId }) => {
-        if (roomId === room) {
-          cleanup();
-        }
-      });
-    }, [room, cleanup]);
+    const move = makeAMove(moveData);
+
+    // illegal move
+    if (move === null) return false;
+
+    socket.emit("move", { // <- 3 emit a move event.
+      move,
+      room,
+    }); // this event will be transmitted to the opponent via the server
+
+    return true;
+  }
+
+  useEffect(() => {
+    socket.on("move", (move) => {
+      makeAMove(move); //
+    });
+  }, [makeAMove]);
+
+  	
+  useEffect(() => {
+    socket.on('playerDisconnected', (player) => {
+      setOver(`${player.username} has disconnected`); // set game over
+    });
+  }, []);
   
+  useEffect(() => {
+    socket.on('closeRoom', ({ roomId }) => {
+      console.log('closeRoom', roomId, room)
+      if (roomId === room) {
+        cleanup();
+      }
+    });
+  }, [room, cleanup]);
+
   // Game component returned jsx
   return (
-    <Stack>
-      <Card>
+    <Stack spacing={2}>
+      <StyledCard>
         <CardContent>
           <Typography variant="h5">Room ID: {room}</Typography>
         </CardContent>
-      </Card>
-      <Stack flexDirection="row" sx={{ pt: 2 }}>
-        <div className="board" style={{
-          maxWidth: 600,
-          maxHeight: 600,
-          flexGrow: 1,
-        }}>
+      </StyledCard>
+      <Stack direction="row" spacing={2}>
+        <Box
+          className="board"
+          sx={{
+            maxWidth: 600,
+            maxHeight: 600,
+            flexGrow: 1,
+          }}
+        >
           <Chessboard
             position={fen}
             onPieceDrop={onDrop}
             boardOrientation={orientation}
           />
-        </div>
+        </Box>
         {players.length > 0 && (
-          <Box>
-            <List>
-              <ListSubheader>Players</ListSubheader>
-              {players.map((p) => (
-                <ListItem key={p.id}>
-                  <ListItemText primary={p.username} />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
+          <StyledList>
+            <ListSubheader>Players</ListSubheader>
+            {players.map((p) => (
+              <ListItem key={p.id}>
+                <ListItemText primary={p.username} />
+              </ListItem>
+            ))}
+          </StyledList>
         )}
       </Stack>
       <CustomDialog // Game Over CustomDialog

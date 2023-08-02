@@ -16,8 +16,6 @@ const io = new Server(server, {
   cors: '*', // allow connection from any origin
 });
 
-
-// Change after this to store in a database like Mongo and use cache
 const rooms = new Map();
 
 // io.connection
@@ -25,18 +23,16 @@ io.on('connection', (socket) => {
   // socket refers to the client socket that just got connected.
   // each socket is assigned an id
   console.log(socket.id, 'connected');
-  // listen to username event
 
   socket.on('username', (username) => {
     console.log('username:', username);
     socket.data.username = username;
   });
 
-  // createRoom
   socket.on('createRoom', async (callback) => { // callback here refers to the callback function from the client passed as data
     const roomId = uuidV4(); // <- 1 create a new uuid
     await socket.join(roomId); // <- 2 make creating user join the room
-   
+	 
     // set roomId as a key and roomData including players as value in the map
     rooms.set(roomId, { // <- 3
       roomId,
