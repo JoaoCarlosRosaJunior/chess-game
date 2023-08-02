@@ -1,1 +1,3 @@
 frontend/.gitignore
+backend/.gitignore
+/.vscode
